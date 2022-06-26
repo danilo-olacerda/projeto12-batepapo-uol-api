@@ -18,10 +18,6 @@ const messageSchema = joi.object({
     text: joi.string().required(),
     type: joi.string().valid('message','private_message').required()
 });
-const userSend = joi.object({
-    to: joi.string().required()
-});
-
 
 client.connect().then(() => {
 	db = client.db("batepapoUol");
@@ -108,31 +104,29 @@ server.get("/messages", async (req, res) => {
     res.send(messages);
 });
 
-server.post("/status", (req, res) => {
-    
-})
+server.post("/status", async (req, res) => {
+    const user = req.headers.user;
+    const verifyUserExist = await db.collection("participants").findOne({name: user});
 
-/* 
-
-
-const limit = req.query.limit;
-
-app.post("/usuarios", (req, res) => {
-	// inserindo usuário
-	db.collection("users")
-      .insertOne({})
-      .then(() => {
-        res.send("koe");
+    if(!verifyUserExist){
+        res.sendStatus(404);
         return;
-      });
+    }
+
+    await db.collection("participants").updateOne({name: user}, {$set: {lastStatus: Date.now()}});
+    res.sendStatus(200);
 });
 
-
-*/
-
-
-
-
+setInterval(async ()=>{
+    const participants = await db.collection("participants").find().toArray();
+    participants.map(async (el) => {
+        if (Date.now() - el.lastStatus > 10000){
+            const unLoginMessage = {from: el.name, to: 'Todos', text: 'sai da sala...', type: 'status', time: `${dayjs().hour()}:${dayjs().minute()}:${dayjs().second()}`};
+            await db.collection("participants").deleteOne({name: el.name});
+            await db.collection("messages").insertOne(unLoginMessage);
+        }
+    })
+}, 15000);
 
 
 server.listen(process.env.PORT);
