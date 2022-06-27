@@ -4,6 +4,7 @@ import { MongoClient, ObjectId } from "mongodb";
 import dotenv from "dotenv";
 import dayjs from "dayjs";
 import joi from "joi";
+import { stripHtml } from "string-strip-html";
 
 dotenv.config();
 
@@ -78,6 +79,9 @@ server.post("/messages", async (req, res)=>{
         res.send("Usuário que enviou a mensagem deve estar logado!");
         return;
     }
+
+    req.body.text = stripHtml(req.body.text).result;
+    req.body.text = req.body.text.trim();
 
     const newMessage = {
         ...req.body,
