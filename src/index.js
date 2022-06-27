@@ -141,6 +141,37 @@ server.delete("/messages/:ID_DA_MENSAGEM", async (req, res) => {
         return;
     }
 });
+server.put("/messages/:ID_DA_MENSAGEM", async (req, res)=>{
+    const idMsg = req.params.ID_DA_MENSAGEM;
+    const validation = messageSchema.validate(req.body);
+    const from = req.headers.user;
+
+    if (validation.error){
+        res.status(422);
+        res.send(validation.error.details);
+        return;
+    }
+    try {
+        const msg = await db.collection("messages").findOne({ _id: new ObjectId(idMsg) });
+        req.body = {
+            ...req.body,
+            time: `${dayjs().hour()}:${dayjs().minute()}:${dayjs().second()}`
+        }
+
+        if (msg.from!==from){
+            res.sendStatus(401);
+            return;
+        } else {
+            await db.collection("messages").updateOne({ _id: new ObjectId(idMsg) }, {$set: req.body});
+            return;
+        }
+        
+    } catch (error) {
+        res.sendStatus(404);
+        return;
+    }
+
+});
 
 setInterval(async ()=>{
     const participants = await db.collection("participants").find().toArray();
